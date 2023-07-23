@@ -1,0 +1,2 @@
+pandas==1.4.3
+striprtf==0.0.25
