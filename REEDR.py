@@ -10,13 +10,13 @@ from os import listdir
 import pandas as pd
 
 
-# In[ ]:
-
-
-
-
-
 # In[2]:
+
+
+get_ipython().system('pip3 freeze > requirements.txt')
+
+
+# In[39]:
 
 
 def keyword_cleaner(keyword):
@@ -176,8 +176,22 @@ TWO_D_CALC_LIST = [
     ('AVA(I,D) ', 'cm2')
 ]
 
+DICT_VARS = ['results_date', 'contrib_system', 'name', 'study_date',
+'mrn', 'gender', 'dob', 'location', 'age', 'height', 'weight',
+'bsa', 'reason', 'hr', 'MM HR', 'MM R-R int', 'ACS', 'MV E point',
+'MV P1/2t max vel', 'MV P1/2t', 'MV A point', 'MVA(P1/2t)',
+'MR max vel', 'MR max PG', 'PA mean', 'RVSP(TR)', 'RVSP', 
+'PA pr(Accel)', 'PA acc time', 'EDV(MOD-sp4)', 'LV EDV (BP)',
+'LV EF (MOD) BP', 'LV ESV (BP)', 'ESV(MOD-sp4)', 'ESV(MOD-sp2)',
+'EF(MOD-sp4)', 'EF(MOD-sp2)', 'IVSs', 'LA Volume A-L (BP)',
+'LA Volume A-L (BP) index', 'RA Area 4Cs', 'Pulm. R-R', 
+'Pulm. HR', 'MV A dur', 'MV A max vel', 'AVA (Dim Index)',
+'MVA(VTI)','Pulm Sys Vel','Pulm Dias Vel','PA mean PG',
+'Pulm A Revs Vel', 'Pulm A Revs Dur','ivc_diam', 'ao_root_diam',
+'lvidd', 'lvids', 'ivsd', 'TR Max vel', 'TR Max PG']
 
-# In[3]:
+
+# In[40]:
 
 
 class philips_echo(object):
@@ -192,13 +206,14 @@ class philips_echo(object):
         self.hr = 'N/A'
         self.la_dimension = 'N/A'
         self.lvpwd = 'N/A'
+        self.ivc_diam = 'N/A'
         
         calc_key = [doublet[0] for doublet in TWO_D_CALC_LIST]
         keywords = [keyword_cleaner(calcs[0]) for calcs in TWO_D_CALC_LIST]
 
         self.two_d_calc_dict = {}
         
-        for line in file:
+        for idx, line in enumerate(file):
             if 'Result Date' in line:
                 # works
                 self.results_date = line.split(
@@ -275,6 +290,16 @@ class philips_echo(object):
                 # works
                 self.bp = line.split(
                     'BP: ')[-1].replace(' ', '')
+                
+            if 'inferior vena cava' in line and 'appeared' in line:
+                next_line = 1
+                if 'inferior vena cava' in line and 'appeared' in line:
+                    ivc_diam = line.split('appeared')[-1]
+                    while '.' not in ivc_diam:
+                        ivc_diam += file[idx + next_line]
+                        next_line += 1
+                    ivc_diam = ivc_diam.split('.')[0]
+                self.ivc_diam = ivc_diam
                 
             '''
             New line
@@ -310,7 +335,7 @@ class philips_echo(object):
                     
 
 
-# In[4]:
+# In[41]:
 
 
 class labhist_echo(object):
@@ -329,6 +354,7 @@ class labhist_echo(object):
         self.lvids = 'N/A'
         self.ivsd = 'N/A'
         self.lvpwd = 'N/A'
+        self.ivc_diam = 'N/A'
         
 
 
@@ -337,7 +363,7 @@ class labhist_echo(object):
 
         self.two_d_calc_dict = {}
         
-        for line in file:
+        for idx, line in enumerate(file):
             if 'Result Date' in line:
                 # works
                 self.results_date = line.split(
@@ -415,6 +441,16 @@ class labhist_echo(object):
                 self.bp = line.split(
                     'BP: ')[-1].replace(' ', '')
                 
+            if 'inferior vena cava' in line and 'appeared' in line:
+                next_line = 1
+                if 'inferior vena cava' in line and 'appeared' in line:
+                    ivc_diam = line.split('appeared')[-1]
+                    while '.' not in ivc_diam:
+                        ivc_diam += file[idx + next_line]
+                        next_line += 1
+                    ivc_diam = ivc_diam.split('.')[0]
+                self.ivc_diam = ivc_diam
+                
             '''
             New line
             '''
@@ -445,7 +481,7 @@ class labhist_echo(object):
 
 
 
-# In[5]:
+# In[42]:
 
 
 FILE_DIR = './echos/'
@@ -465,40 +501,40 @@ for file_loc in dir_list:
             echo_list.append(philips_echo(text))
 
 
-# In[6]:
+# In[43]:
 
 
 data_dict = {}
 
 for pt_data in echo_list:
-    data_dict[pt_data.mrn] = {}
+    temp_pt_mrn = pt_data.mrn
+    temp_dupe_int = 0
+    while temp_pt_mrn in data_dict:
+        temp_dupe_int += 1
+        temp_pt_mrn = temp_pt_mrn.split('_')[0]
+        temp_pt_mrn = temp_pt_mrn + '_' + str(temp_dupe_int)
+    data_dict[temp_pt_mrn] = {}
     for key, val in pt_data.__dict__.items():
         if key != 'two_d_calc_dict':
-            data_dict[pt_data.mrn][key] = val
+            data_dict[temp_pt_mrn][key] = val
         else:
-            data_dict[pt_data.mrn].update(
+            data_dict[temp_pt_mrn].update(
                 pt_data.two_d_calc_dict)
 
 
-# In[7]:
+# In[44]:
 
 
 df = pd.DataFrame(data_dict).T
 
 
-# In[ ]:
-
-
-
-
-
-# In[8]:
+# In[45]:
 
 
 df = df.fillna('N/A')
 
 
-# In[9]:
+# In[46]:
 
 
 '''
@@ -506,7 +542,7 @@ Combinator
 '''
 
 
-# In[10]:
+# In[47]:
 
 
 cleaned_data_dict = {}
@@ -522,9 +558,17 @@ def combination_func(var_1, var_2):
         return('COMBO ERROR')
     else:
         return('N/A')
+    
 
 for index, data in df.iterrows():
     temp_dict = {}
+    
+    for var in DICT_VARS:
+        if var in data.keys():
+            pass
+        else:
+            data[var] = 'N/A'
+    
     temp_dict['results_date'] = data['results_date']
     temp_dict['contrib_system'] = data['contrib_system']
     temp_dict['name'] = data['name']
@@ -577,8 +621,7 @@ for index, data in df.iterrows():
     temp_dict['PA mean PG'] = data['PA mean PG']
     temp_dict['Pulm A Revs Vel'] = data['Pulm A Revs Vel']
     temp_dict['Pulm A Revs Dur'] = data['Pulm A Revs Dur']
-
-
+    temp_dict['IVC Diam'] = data['ivc_diam']
     temp_dict['la_dimension'] = combination_func(data['la_dimension'], data['LA dimension'])
     temp_dict['ao_root_diam'] = combination_func(data['ao_root_diam'], data['Ao root diam'])
     temp_dict['lvidd'] = combination_func(data['lvidd'], data['LVIDd'])
@@ -615,7 +658,7 @@ for index, data in df.iterrows():
     cleaned_data_dict[data['mrn']] = temp_dict
 
 
-# In[11]:
+# In[48]:
 
 
 df = pd.DataFrame(cleaned_data_dict).T
