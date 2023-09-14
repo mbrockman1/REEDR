@@ -1,4 +1,4 @@
-# REEDER
+# REEDR
 Echo data collection made easy
 
 
