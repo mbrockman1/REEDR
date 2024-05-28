@@ -1,48 +1,109 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 from striprtf.striprtf import rtf_to_text
 from os import listdir
 
 import pandas as pd
+import re
 
 
 # In[ ]:
 
 
-
-
-
-# In[2]:
-
-
-def keyword_cleaner(keyword):
+def interp_eval(interp_str):
+    result_dict = {}
     try:
-        colon_index = keyword.index(':')
-        len_index = len(keyword)
-        return(keyword[0:colon_index].strip())
-    except(ValueError):
-        return(keyword.strip())
-
-def val_cleaner(temp_line):
-    for idx, char in enumerate(temp_line):
-        if char.isdigit():
-            break
-    try:
-        return(temp_line[idx: len(temp_line)].strip())
-    except(UnboundLocalError):
-        print(temp_line)
+        result_dict['Wall Motion'] = re.findall(r"([^.]*?wall motion abnormalities[^.]*\.)",interp_str)[0]
+    except(IndexError):
+        result_dict['Wall Motion'] = "None"
         
+    try:
+        result_dict['Aortic Valve'] = re.findall(r"([^.]*?aortic valve[^.]*\.)",interp_str)[0]
+    except(IndexError):
+        result_dict['Aortic Valve'] = "None"
+    
+    try:
+        result_dict['Mitral Valve'] = re.findall(r"([^.]*?mitral valve[^.]*\.)",interp_str)[0]
+    except(IndexError):
+        result_dict['Mitral Valve'] = "None"
+        
+    try:
+        result_dict['Tricuspid Valve'] = re.findall(r"([^.]*?tricupsid valve[^.]*\.)",interp_str)[0]
+    except(IndexError):
+        result_dict['Tricuspid Valve'] = "None"
+        
+    try:
+        result_dict['Pulmonic Valve'] = re.findall(r"([^.]*?pulmonic valve[^.]*\.)",interp_str)[0]
+    except(IndexError):
+        result_dict['Pulmonic Valve'] = "None"
+        
+    try:
+        result_dict['Pericardial Effusion'] = re.findall(r"([^.]*?pericardial[^.]*\.)",interp_str)[0]
+    except(IndexError):
+        result_dict['Pericardial Effusion'] = "None"
+        
+    try:
+        result_dict['Pulm HTN'] = re.findall(r"([^.]*?pulmonary[^.]*\.)",interp_str)[0]
+    except(IndexError):
+        result_dict['Pulm HTN'] = "None"
+        
+    try:
+        result_dict['ASD Assessment'] = re.findall(r"([^.]*?ASD[^.]*\.)",interp_str)[0]
+    except(IndexError):
+        result_dict['ASD Assessment'] = "None"
+        
+    try:
+        result_dict['VSD Assessment'] = re.findall(r"([^.]*?VSD[^.]*\.)",interp_str)[0]
+    except(IndexError):
+        result_dict['VSD Assessment'] = "None"
+        
+    try:
+        result_dict['Thrombus Assessment'] = re.findall(r"([^.]*?thrombus[^.]*\.)",interp_str)[0]
+    except(IndexError):
+        result_dict['Thrombus Assessment'] = "None"
+        
+    try:
+        result_dict['Dissection Assessment'] = re.findall(r"([^.]*?dissection[^.]*\.)",interp_str)[0]
+    except(IndexError):
+        result_dict['Dissection Assessment'] = "None"
+        
+    try:
+        result_dict['Strain Assessment'] = re.findall(r"([^.]*?strain[^.]*\.)",interp_str)[0]
+    except(IndexError):
+        result_dict['Strain Assessment'] = "None"
+        
+    try:
+        result_dict['Tamponade Assessment'] = re.findall(r"([^.]*?tamponade[^.]*\.)",interp_str)[0]
+    except(IndexError):
+        result_dict['Tamponade Assessment'] = "None"
+        
+    try:
+        result_dict['Dehiscence Assessment'] = re.findall(r"([^.]*?dehisc[^.]*\.)",interp_str)[0]
+    except(IndexError):
+        result_dict['Dehiscence Assessment'] = "None"
+        
+    return(result_dict)
+
+
+# In[ ]:
+
+
 def reporting_sys(file):
     file = file.split('\n')
+    contrib_sys = ''
     for line in file:
         if 'Contributor system' in line:
             #works
-            return(line.split(
-                'Contributor system:\t')[1])
+            contrib_sys = line.split(
+                'Contributor system:\t')[1]
+    if contrib_sys == 'LABHIST':
+        return(labhist_demographics(text))
+    elif contrib_sys == 'PHILIPS':
+        return(philips_demographics(text))
 
 TWO_D_CALC_LIST = [
     ('LA vol: ', 'ml'),
@@ -176,267 +237,246 @@ TWO_D_CALC_LIST = [
     ('AVA(I,D) ', 'cm2')
 ]
 
-
-# In[3]:
-
-
-class philips_echo(object):
-    def __init__(self, file):
-        file = file.split('\n')
-        
-        self.height = 'N/A'
-        self.weight = 'N/A'
-        self.bsa = 'N/A'
-        self.bp = 'N/A'
-        self.reason = 'N/A'
-        self.hr = 'N/A'
-        self.la_dimension = 'N/A'
-        self.lvpwd = 'N/A'
-        
-        calc_key = [doublet[0] for doublet in TWO_D_CALC_LIST]
-        keywords = [keyword_cleaner(calcs[0]) for calcs in TWO_D_CALC_LIST]
-
-        self.two_d_calc_dict = {}
-        
-        for line in file:
-            if 'Result Date' in line:
-                # works
-                self.results_date = line.split(
-                    'Result Date:\t')[1]
-                
-            if 'Contributor system' in line:
-                #works
-                self.contrib_system = line.split(
-                    'Contributor system:\t')[1]
-                
-            if 'Name: ' in line:
-                # works
-                self.name = line.split(
-                    'Name: ')[1].split(
-                    'Study Date:')[0].replace(' ', '')
-                
-            if 'Study Date: ' in line:
-                # works
-                self.study_date = line.split('Study Date:')[1][0:11]
-
-            if 'MRN: ' in line:
-                # works
-                temp_mrn = line.split('MRN: ')[1]
-                new_str = ''
-                for val in temp_mrn:
-                    try:
-                        int(val)
-                        new_str += val
-                    except(ValueError):
-                        break
-                self.mrn = new_str
-                
-            if 'Height: ' in line:
-                # works
-                self.height = line.split(
-                    'Height: ')[-1].replace(' ', '')
-                
-                
-            if 'Location: ' in line:
-                # works
-                self.location = line.split(
-                    'Location: ')[1][0: 3]
-                
-            if 'Weight: ' in line:
-                # works
-                self.weight = line.split(
-                    'Weight: ')[-1].replace(' ', '')
-                
-
-            if 'DOB: ' in line:
-                # works
-                self.dob = line.split(
-                    'DOB: ')[1][0:11]
-                
-            if 'Gender: ' in line:
-                # works
-                self.gender = (
-                    line.split(
-                    'Gender: ')[1].split(
-                    'BSA')[0].replace(' ', ''))[0]
-                
-            if 'BSA: ' in line:
-                # works
-                self.bsa = line.split(
-                    'BSA: ')[-1].replace(' ', '')
-
-                
-            if 'Age: ' in line:
-                # works
-                self.age = line.split(
-                    'Age: ')[1][0:4]
-                
-            if '  BP: ' in line:
-                # works
-                self.bp = line.split(
-                    'BP: ')[-1].replace(' ', '')
-                
-            '''
-            New line
-            '''
-            if 'Reason For Study: ' in line:
-                # works
-                self.reason = line.split(
-                    'Reason For Study: ')[1].split(
-                    'HR: ')[0].replace(' ', '')
-                
-            if 'HR: ' in line:
-                # works
-                self.hr = line.split(
-                    'HR: ')[-1].replace(' ', '')
+DICT_VARS = ['results_date', 'contrib_system', 'name', 'study_date',
+'mrn', 'gender', 'dob', 'location', 'age', 'height', 'weight',
+'bsa', 'reason', 'hr', 'MM HR', 'MM R-R int', 'ACS', 'MV E point',
+'MV P1/2t max vel', 'MV P1/2t', 'MV A point', 'MVA(P1/2t)',
+'MR max vel', 'MR max PG', 'PA mean', 'RVSP(TR)', 'RVSP', 
+'PA pr(Accel)', 'PA acc time', 'EDV(MOD-sp4)', 'LV EDV (BP)',
+'LV EF (MOD) BP', 'LV ESV (BP)', 'ESV(MOD-sp4)', 'ESV(MOD-sp2)',
+'EF(MOD-sp4)', 'EF(MOD-sp2)', 'IVSs', 'LA Volume A-L (BP)',
+'LA Volume A-L (BP) index', 'RA Area 4Cs', 'Pulm. R-R', 
+'Pulm. HR', 'MV A dur', 'MV A max vel', 'AVA (Dim Index)',
+'MVA(VTI)','Pulm Sys Vel','Pulm Dias Vel','PA mean PG',
+'Pulm A Revs Vel', 'Pulm A Revs Dur','ivc_diam', 'ao_root_diam',
+'lvidd', 'lvids', 'ivsd', 'TR Max vel', 'TR Max PG', 'TAPSE']
 
 
-                    
-        for line in file:    
-            for keyword in keywords:
-                if keyword in line:
-                    temp_line = line.split(keyword)[1]
-                    for sub_key in keywords:
-                        if sub_key != keyword:
-                            temp_line = temp_line.split(sub_key)[0]
-                    self.two_d_calc_dict[keyword] = val_cleaner(temp_line)
-                    
-    def range_cleaner(self, string):
-        if '(' in string and ')' in string:
-            string = string.split(')')[0] + ')'
-        else:
-            string = string.split('cm')[0]
-        return(string)
-                    
+# In[ ]:
 
 
-# In[4]:
+def philips_demographics(file):
+    file = file.split('\n')
+    demo_dict = {}
+    for idx, line in enumerate(file):
+        if 'Result Date' in line:
+            # works
+            demo_dict['Results Date'] = line.split(
+                'Result Date:\t')[1]
+
+        if 'Contributor system' in line:
+            #works
+            demo_dict['Contrib System'] = line.split(
+                'Contributor system:\t')[1]
+            
+        if 'Encounter info' in line:
+            encounter_list = line.strip('Encounter info:\t').split(',')
+            fin = encounter_list[0]
+            admit_location = encounter_list[2].strip(' ')
+            admit_date, discharge_date = encounter_list[3].replace(' ', '').split('-')
+            demo_dict['fin'] = fin
+            demo_dict['admit_location'] = admit_location
+            demo_dict['admit_date'] = admit_date
+            demo_dict['discharge_date'] = discharge_date
+            
+
+        if 'Name: ' in line:
+            # works
+            demo_dict['Name'] = line.split(
+                'Name: ')[1].split(
+                'Study Date:')[0].replace(' ', '')
+
+        if 'Study Date: ' in line:
+            # works
+            demo_dict['Study Date'] = line.split('Study Date:')[1][0:11]
+
+        if 'MRN: ' in line:
+            # works
+            temp_mrn = line.split('MRN: ')[1]
+            new_str = ''
+            for val in temp_mrn:
+                try:
+                    int(val)
+                    new_str += val
+                except(ValueError):
+                    break
+            demo_dict['MRN'] = new_str
+
+        if 'Height: ' in line:
+            # works
+            demo_dict['Height'] = line.split(
+                'Height: ')[-1].replace(' ', '')
 
 
-class labhist_echo(object):
-    def __init__(self, file):
-        file = file.split('\n')
-        
-        self.height = 'N/A'
-        self.weight = 'N/A'
-        self.bsa = 'N/A'
-        self.bp = 'N/A'
-        self.reason = 'N/A'
-        self.hr = 'N/A'
-        self.la_dimension = 'N/A'
-        self.ao_root_diam = 'N/A'
-        self.lvidd = 'N/A'
-        self.lvids = 'N/A'
-        self.ivsd = 'N/A'
-        self.lvpwd = 'N/A'
-        
+        if 'Location: ' in line:
+            # works
+            demo_dict['Location'] = line.split(
+                'Location: ')[1][0: 3]
+
+        if 'Weight: ' in line:
+            # works
+            demo_dict['Weight'] = line.split(
+                'Weight: ')[-1].replace(' ', '')
 
 
-        calc_key = [doublet[0] for doublet in TWO_D_CALC_LIST]
-        keywords = [keyword_cleaner(calcs[0]) for calcs in TWO_D_CALC_LIST]
+        if 'DOB: ' in line:
+            # works
+            demo_dict['DOB'] = line.split(
+                'DOB: ')[1][0:11]
 
-        self.two_d_calc_dict = {}
-        
-        for line in file:
-            if 'Result Date' in line:
-                # works
-                self.results_date = line.split(
-                    'Result Date:\t')[1]
-                
-            if 'Contributor system' in line:
-                #works
-                self.contrib_system = line.split(
-                    'Contributor system:\t')[1]
-                
-            if 'Name: ' in line:
-                # works
-                self.name = line.split(
-                    'Name: ')[1].split(
-                    'Study Date:')[0].replace(' ', '')
-                
-            if 'Study Date: ' in line:
-                # works
-                self.study_date = line.split('Study Date:')[1][0:11]
+        if 'Gender: ' in line:
+            # works
+            demo_dict['Gender'] = (
+                line.split(
+                'Gender: ')[1].split(
+                'BSA')[0].replace(' ', ''))[0]
 
-            if 'MRN: ' in line:
-                # works
-                temp_mrn = line.split('MRN: ')[1]
-                new_str = ''
-                for val in temp_mrn:
-                    try:
-                        int(val)
-                        new_str += val
-                    except(ValueError):
-                        break
-                self.mrn = new_str
-                
-            if 'Height: ' in line:
-                # works
-                self.height = line.split(
-                    'Height: ')[-1].replace(' ', '')
-                
-                
-            if 'Location: ' in line:
-                # works
-                self.location = line.split(
-                    'Location: ')[1][0: 3]
-                
-            if 'Weight: ' in line:
-                # works
-                self.weight = line.split(
-                    'Weight: ')[-1].replace(' ', '')
-                
+        if 'BSA: ' in line:
+            # works
+            demo_dict['BSA'] = line.split(
+                'BSA: ')[-1].replace(' ', '')
 
-            if 'DOB: ' in line:
-                # works
-                self.dob = line.split(
-                    'DOB: ')[1][0:11]
-                
-            if 'Gender: ' in line:
-                # works
-                self.gender = (
-                    line.split(
-                    'Gender: ')[1].split(
-                    'BSA')[0].replace(' ', ''))[0]
-                
-            if 'BSA: ' in line:
-                # works
-                self.bsa = line.split(
-                    'BSA: ')[-1].replace(' ', '')
 
-                
-            if 'Age: ' in line:
-                # works
-                self.age = line.split(
-                    'Age: ')[1][0:4]
-                
-            if '  BP: ' in line:
-                # works
-                self.bp = line.split(
-                    'BP: ')[-1].replace(' ', '')
-                
-            '''
-            New line
-            '''
-            if 'Reason For Study: ' in line:
-                # works
-                self.reason = line.split(
-                    'Reason For Study: ')[1].split(
-                    'HR: ')[0].replace(' ', '')
-                
-            if 'HR: ' in line:
-                # works
-                self.hr = line.split(
-                    'HR: ')[-1].replace(' ', '')
-        for line in file:    
-            for keyword in keywords:
-                if keyword in line:
-                    temp_line = line.split(keyword)[1]
-                    for sub_key in keywords:
-                        if sub_key != keyword:
-                            temp_line = temp_line.split(sub_key)[0]
-                    self.two_d_calc_dict[keyword] = val_cleaner(temp_line)
-                   
+        if 'Age: ' in line:
+            # works
+            demo_dict['AGE'] = line.split(
+                'Age: ')[1][0:4]
+
+        if '  BP: ' in line:
+            # works
+            demo_dict['BP'] = line.split(
+                'BP: ')[-1].replace(' ', '')
+
+        if 'inferior vena cava' in line and 'appeared' in line:
+            next_line = 1
+            if 'inferior vena cava' in line and 'appeared' in line:
+                ivc_diam = line.split('appeared')[-1]
+                while '.' not in ivc_diam:
+                    ivc_diam += file[idx + next_line]
+                    next_line += 1
+                ivc_diam = ivc_diam.split('.')[0]
+            demo_dict['IVC Diam'] = ivc_diam
+
+        '''
+        New line
+        '''
+        if 'Reason For Study: ' in line:
+            # works
+            demo_dict['Reason'] = line.split(
+                'Reason For Study: ')[1].split(
+                'HR: ')[0].replace(' ', '')
+
+        if 'HR: ' in line:
+            # works
+            demo_dict['HR'] = line.split(
+                'HR: ')[-1].replace(' ', '')
+    return(demo_dict)
+
+def labhist_demographics(file):
+    file = file.split('\n')
+    demo_dict = {}
+    for idx, line in enumerate(file):
+        if 'Result Date' in line:
+            # works
+            demo_dict['Results Date'] = line.split(
+                'Result Date:\t')[1]
+
+        if 'Contributor system' in line:
+            #works
+            demo_dict['Contrib System'] = line.split(
+                'Contributor system:\t')[1]
+
+        if 'Name: ' in line:
+            # works
+            demo_dict['Name'] = line.split(
+                'Name: ')[1].split(
+                'Study Date:')[0].replace(' ', '')
+
+        if 'Study Date: ' in line:
+            # works
+            demo_dict['Study Date'] = line.split('Study Date:')[1][0:11]
+
+        if 'MRN: ' in line:
+            # works
+            temp_mrn = line.split('MRN: ')[1]
+            new_str = ''
+            for val in temp_mrn:
+                try:
+                    int(val)
+                    new_str += val
+                except(ValueError):
+                    break
+            demo_dict['MRN'] = new_str
+
+        if 'Height: ' in line:
+            # works
+            demo_dict['Height'] = line.split(
+                'Height: ')[-1].replace(' ', '')
+
+
+        if 'Location: ' in line:
+            # works
+            demo_dict['Location'] = line.split(
+                'Location: ')[1][0: 3]
+
+        if 'Weight: ' in line:
+            # works
+            demo_dict['Weight'] = line.split(
+                'Weight: ')[-1].replace(' ', '')
+
+
+        if 'DOB: ' in line:
+            # works
+            demo_dict['DOB'] = line.split(
+                'DOB: ')[1][0:11]
+
+        if 'Gender: ' in line:
+            # works
+            demo_dict['Gender'] = (
+                line.split(
+                'Gender: ')[1].split(
+                'BSA')[0].replace(' ', ''))[0]
+
+        if 'BSA: ' in line:
+            # works
+            demo_dict['BSA'] = line.split(
+                'BSA: ')[-1].replace(' ', '')
+
+
+        if 'Age: ' in line:
+            # works
+            demo_dict['AGE'] = line.split(
+                'Age: ')[1][0:4]
+
+        if '  BP: ' in line:
+            # works
+            demo_dict['BP'] = line.split(
+                'BP: ')[-1].replace(' ', '')
+
+        if 'inferior vena cava' in line and 'appeared' in line:
+            next_line = 1
+            if 'inferior vena cava' in line and 'appeared' in line:
+                ivc_diam = line.split('appeared')[-1]
+                while '.' not in ivc_diam:
+                    ivc_diam += file[idx + next_line]
+                    next_line += 1
+                ivc_diam = ivc_diam.split('.')[0]
+            demo_dict['IVC Diam'] = ivc_diam
+
+        '''
+        New line
+        '''
+        if 'Reason For Study: ' in line:
+            # works
+            demo_dict['Reason'] = line.split(
+                'Reason For Study: ')[1].split(
+                'HR: ')[0].replace(' ', '')
+
+        if 'HR: ' in line:
+            # works
+            demo_dict['HR'] = line.split(
+                'HR: ')[-1].replace(' ', '')
+    return(demo_dict)
 
 
 # In[ ]:
@@ -445,187 +485,62 @@ class labhist_echo(object):
 
 
 
-# In[5]:
+# In[ ]:
 
+
+data_dict = {}
 
 FILE_DIR = './echos/'
 
 dir_list = [FILE_DIR + file for file in listdir(FILE_DIR)
             if file.endswith('.rtf')]
 
-echo_list = []
 for file_loc in dir_list:
     with open(file_loc, 'r') as file:
         text = file.read()
         text = rtf_to_text(text)
-        rep_sys = reporting_sys(text)
-        if rep_sys == 'LABHIST':
-            echo_list.append(labhist_echo(text))
-        elif rep_sys == 'PHILIPS':
-            echo_list.append(philips_echo(text))
-
-
-# In[6]:
-
-
-data_dict = {}
-
-for pt_data in echo_list:
-    data_dict[pt_data.mrn] = {}
-    for key, val in pt_data.__dict__.items():
-        if key != 'two_d_calc_dict':
-            data_dict[pt_data.mrn][key] = val
-        else:
-            data_dict[pt_data.mrn].update(
-                pt_data.two_d_calc_dict)
-
-
-# In[7]:
-
-
-df = pd.DataFrame(data_dict).T
-
-
-# In[ ]:
-
-
-
-
-
-# In[8]:
-
-
-df = df.fillna('N/A')
-
-
-# In[9]:
-
-
-'''
-Combinator
-'''
-
-
-# In[10]:
-
-
-cleaned_data_dict = {}
-
-def combination_func(var_1, var_2):
-    if var_1 != 'N/A' and var_2 == 'N/A':
-        return(var_1)
-    elif var_1 == 'N/A' and var_2 != 'N/A':
-        return(var_2)
-    elif var_1 == var_2:
-        return(var_1)
-    elif var_1 != 'N/A' and var_2 != 'N/A':
-        return('COMBO ERROR')
-    else:
-        return('N/A')
-
-for index, data in df.iterrows():
-    temp_dict = {}
-    temp_dict['results_date'] = data['results_date']
-    temp_dict['contrib_system'] = data['contrib_system']
-    temp_dict['name'] = data['name']
-    temp_dict['study_date'] = data['study_date']
-    temp_dict['mrn'] = data['mrn']
-    temp_dict['gender'] = data['gender']
-    temp_dict['dob'] = data['dob']
-    temp_dict['location'] = data['location']
-    temp_dict['age'] = data['age']
-    temp_dict['height'] = data['height']
-    temp_dict['weight'] = data['weight']
-    temp_dict['bsa'] = data['bsa']
-    temp_dict['reason'] = data['reason']
-    temp_dict['hr'] = data['hr']
-    temp_dict['mm_hr'] = data['MM HR']
-    temp_dict['mm_rr_int'] = data['MM R-R int']
-    temp_dict['acs'] = data['ACS']
-    temp_dict['mv_e_point'] = data['MV E point']
-    temp_dict['mv_p1_2t_max_vel'] = data['MV P1/2t max vel']
-    temp_dict['mv_p1_2t'] = data['MV P1/2t']
-    temp_dict['mv_a_point'] = data['MV A point']
-    temp_dict['mva_p12t'] = data['MVA(P1/2t)']
-    temp_dict['mr_max_vel'] = data['MR max vel']
-    temp_dict['mr_max_pg'] = data['MR max PG']
-    temp_dict['pa_mean'] = data['PA mean']
-    temp_dict['rvsp_tr'] = data['RVSP(TR)']
-    temp_dict['rvsp'] = data['RVSP']
-    temp_dict['PA pr(Accel)'] = data['PA pr(Accel)']
-    temp_dict['PA acc time'] = data['PA acc time']
-    temp_dict['EDV(MOD-sp4)'] = data['EDV(MOD-sp4)']
-    temp_dict['LV EDV (BP)'] = data['LV EDV (BP)']
-    temp_dict['LV EF (MOD) BP'] = data['LV EF (MOD) BP']
-    temp_dict['LV ESV (BP)'] = data['LV ESV (BP)']
-    temp_dict['ESV(MOD-sp4)'] = data['ESV(MOD-sp4)']
-    temp_dict['ESV(MOD-sp2)'] = data['ESV(MOD-sp2)']
-    temp_dict['EF(MOD-sp4)'] = data['EF(MOD-sp4)']
-    temp_dict['EF(MOD-sp2)'] = data['EF(MOD-sp2)']
-    temp_dict['IVSs'] = data['IVSs']
-    temp_dict['LA Volume A-L (BP)'] = data['LA Volume A-L (BP)']
-    temp_dict['LA Volume A-L (BP) index'] = data['LA Volume A-L (BP) index']
-    temp_dict['RA Area 4Cs'] = data['RA Area 4Cs']
-    temp_dict['Pulm. R-R'] = data['Pulm. R-R']
-    temp_dict['Pulm. HR'] = data['Pulm. HR']
-    temp_dict['MV A dur'] = data['MV A dur']
-    temp_dict['MV A max vel'] = data['MV A max vel']
-    temp_dict['AVA (Dim Index)'] = data['AVA (Dim Index)']
-    temp_dict['MVA(VTI)'] = data['MVA(VTI)']
-    temp_dict['Pulm Sys Vel'] = data['Pulm Sys Vel']
-    temp_dict['Pulm Dias Vel'] = data['Pulm Dias Vel']
-    temp_dict['PA mean PG'] = data['PA mean PG']
-    temp_dict['Pulm A Revs Vel'] = data['Pulm A Revs Vel']
-    temp_dict['Pulm A Revs Dur'] = data['Pulm A Revs Dur']
-
-
-    temp_dict['la_dimension'] = combination_func(data['la_dimension'], data['LA dimension'])
-    temp_dict['ao_root_diam'] = combination_func(data['ao_root_diam'], data['Ao root diam'])
-    temp_dict['lvidd'] = combination_func(data['lvidd'], data['LVIDd'])
-    temp_dict['lvids'] = combination_func(data['lvids'], data['LVIDs'])
-    temp_dict['ivsd'] = combination_func(data['ivsd'], data['IVSd'])
-    temp_dict['lvpwd'] = combination_func(data['lvpwd'], data['LVPWd'])
-    temp_dict['rvdd'] = combination_func(data['RVDd'], data['RVDd'])
-    temp_dict['fs'] = combination_func(data['FS'], data['FS'])
-    temp_dict['ef_teich'] = combination_func(data['EF(Teich)'], data['EF(Teich)'])
-    temp_dict['lvpws'] = combination_func(data['LVPWs'], data['LVPWs'])
-    temp_dict['%_ivs_thick'] = combination_func(data['% IVS thick'], data['% IVS thick'])
-    temp_dict['lvot_diam'] = combination_func(data['LVOT diam'], data['LVOT diam'])
-    temp_dict['lvot_diam'] = combination_func(data['LVOT diam'], data['LVOT diam'])
-    temp_dict['edv_mod_sp2'] = combination_func(data['EDV(MOD-sp2)'], data['EDV(MOD-sp2)'])
-    temp_dict['edv_mod_sp2'] = combination_func(data['EDV(MOD-sp2)'], data['EDV(MOD-sp2)'])
-    temp_dict['mv_v2_max'] = combination_func(data['MV V2 max'], data['MV V2 max'])
-    temp_dict['mv_max_pg'] = combination_func(data['MV max PG'], data['MV max PG'])
-    temp_dict['mv_mean_pg'] = combination_func(data['MV mean PG'], data['MV mean PG'])                                              
-    temp_dict['mv_dec_time'] = combination_func(data['MV dec time'], data['MV dec time']) 
-    temp_dict['ao_v2_max'] = combination_func(data['Ao V2 max'], data['Ao V2 max'])
-    temp_dict['lv_v1_max'] = combination_func(data['LV V1 max'], data['LV V1 max'])
-    temp_dict['ao_max_pg'] = combination_func(data['Ao max PG'], data['Ao max PG'])
-    temp_dict['lv_v1_vti'] = combination_func(data['LV V1 VTI'], data['LV V1 VTI'])
-    temp_dict['ao_mean_pg'] = combination_func(data['Ao mean PG'], data['Ao mean PG'])
-    temp_dict['ao_v2_vti'] = combination_func(data['Ao V2 VTI'], data['Ao V2 VTI'])
-    temp_dict['ava_id'] = combination_func(data['AVA(I,D)'], data['AVA(I,D)'])
-    temp_dict['ava_vd'] = combination_func(data['AVA(V,D)'], data['AVA(V,D)'])
-    temp_dict['pa_v2_max'] = combination_func(data['PA V2 max'], data['PA V2 max'])
-    temp_dict['tr_max_vel'] = combination_func(data['TR Max vel'], data['TR max vel'])
-    temp_dict['mv_e_max_vel'] = combination_func(data['MV E max vel'], data['MV E max vel'])
-    temp_dict['rap_systole'] = combination_func(data['RAP systole'], data['RAP systole'])
-    temp_dict['pa_max_pg'] = combination_func(data['PA max PG'], data['PA max PG'])
-    temp_dict['tr_max_pg'] = combination_func(data['TR Max PG'], data['TR max PG'])
-    cleaned_data_dict[data['mrn']] = temp_dict
-
-
-# In[11]:
-
-
-df = pd.DataFrame(cleaned_data_dict).T
-df.to_excel('results.xlsx')
+        demo_dict = reporting_sys(text)
+        temp_dict = {}
+        text_for_interp = text.split('\n')
+        after_interp = False
+        interp_qualifier = "Interpretation Summary"
+        interp_data = ""
+        for idx, data in enumerate(text_for_interp):
+            if idx > 20 and data == interp_qualifier:
+                after_interp = True
+            if after_interp == True:
+                if "___________________________________" in data:
+                    after_interp = False
+                else:
+                    interp_data += data + " " 
+        temp_dict['interpretation_summary'] = interp_data
+        for val_unit in TWO_D_CALC_LIST:
+            if val_unit[0] in text:
+                echo_val = text.split(
+                    val_unit[0])[1].split(val_unit[1])[0] + val_unit[1]
+                echo_val = echo_val.split('\n')[0]
+                echo_val = echo_val.split('          ')[0]
+                temp_dict[val_unit[0]] = echo_val
+        temp_dict = dict(sorted(temp_dict.items()))
+        try:
+            demo_dict.update(temp_dict)
+            demo_dict.update(interp_eval(interp_data))
+            data_dict[demo_dict['MRN']] = demo_dict
+        except(AttributeError):
+            print("Error")
 
 
 # In[ ]:
 
 
+df = pd.DataFrame.from_dict(data_dict).transpose()
+df = df.reindex(sorted(df.columns), axis=1)
 
+
+# In[ ]:
+
+
+df
 
 
 # In[ ]:
